@@ -142,6 +142,15 @@ blank = {variableBindings : empty, nextVariable : 0}
 test1 :: Term
 test1 = Compound "cons" [Compound "a" [], Compound "nil" []]
 
+type Type = Term
+
+-- infer :: LambdaTerm -> Array Type -> Type -> Goal
+-- infer (Var i) env ty = case (env !! i) of
+--     Nothing -> no
+--     Just ty' -> (ty ≡ ty')
+-- infer (Ap f x) env ty =
+--    infer f env __ ∧ infer x env __
+-- infer (Lam x) env ty = 
 
 -- We could start with something simple, non-generic like this.
 
