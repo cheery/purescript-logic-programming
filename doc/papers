@@ -1,0 +1,31 @@
+http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf
+ "μKanren: A Minimal Functional Core
+  for Relational Programming"
+ - Dynamically typed version of essentially the same thing as here.
+
+https://arxiv.org/pdf/1805.11006.pdf
+ "Typed Embedding of a Relational Language in OCaml"
+ Dmitrii Kosarev, Dmitry Boulytchev
+ - for polymorphic unification
+
+https://gup.ub.gu.se/file/207634
+ "Typed Logical Variables in Haskell"
+ Koen Claessen, Peter Ljunglöf
+ - Embeds a functional logic programming language
+   in haskell using the ST-monad.
+
+http://www.silvija.net/0000OxfordPublications/seres_thesis.pdf
+ "The Algebra of Logic Programming"
+ Silvija Seres
+
+https://scholarworks.iu.edu/dspace/bitstream/handle/2022/8777/Byrd_indiana_0093A_10344.pdf
+ "Relational Programming in miniKanren,
+  Techniques, Applications, and Implementations"
+  William E. Byrd
+  Not related to this much, but it is an interesting paper
+  about minikanren.
+
+https://arxiv.org/pdf/1701.00633.pdf
+ "Framework for Extending microKanren with Constraints"
+ Jason Hemann, Daniel P. Friedman
+ Dynamically typed implementation of CLP on microKanren.

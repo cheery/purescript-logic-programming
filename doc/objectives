@@ -1,0 +1,23 @@
+Implement a logic programming environment
+as a DSL within purescript.
+
+We could start with something simple, non-generic like this.
+
+type Goal = State -> Array State
+
+data Term = Var Int
+          | Compound String (Array Term)
+
+fresh :: ∀a. (Term -> Goal a) -> Goal a
+yes :: Goal Unit
+no  :: ∀a. Goal a
+(≡) :: Term -> Term -> Goal Unit
+(∧) :: ∀a b. Goal a -> Goal b -> Goal (Tuple a b)
+(∨) :: ∀a b. Goal a -> Goal b -> Goal (Either a b)
+
+run  :: ∀a. Goal a -> Array a
+step :: ∀a. Goal a -> Maybe {answer :: a, next :: (Goal a)}
+
+reify :: Term -> Goal Term
+
+
