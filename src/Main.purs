@@ -5,7 +5,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Control.Lazy (defer, fix)
-import Data.Array (zipWith)
+import Data.Array (zipWith, (!!), (:))
 import Data.Foldable (any, foldr, intercalate)
 import Data.List.Lazy (singleton)
 import Data.List.Lazy.Types (List(..), nil)
@@ -85,12 +85,12 @@ unify (Var i)        (Var j)        st = -- these are free variables, so neither
     pure $ st {
                 variableBindings = insert i (Var j) st.variableBindings }
 unify (Var i)        compound       st = 
-    if occurs i compound st
+    if false -- occurs i compound st
     then nil
     else pure $ st {
             variableBindings = insert i compound st.variableBindings }
 unify compound       (Var j)        st =
-    if occurs j compound st
+    if false -- occurs j compound st
     then nil
     else pure $ st { 
                 variableBindings = insert j compound st.variableBindings }
@@ -161,20 +161,51 @@ example1 = (fresh $ \x -> listR x) blank
 test1 :: Term
 test1 = Compound "cons" [Compound "a" [], Compound "emp" []]
 
+
+
+-- We are using De-bruijn indexing in LambdaTerm
+data LambdaTerm = LVar Int                 -- x
+                | Ap LambdaTerm LambdaTerm -- f x
+                | Abs LambdaTerm           -- λ. body
+                | NumLiteral Int           -- some number
 type Type = Term
 
--- infer :: LambdaTerm -> List Type -> Type -> Goal
--- infer (Var i) env ty = case (env !! i) of
---     Nothing -> no
---     Just ty' -> (ty ≡ ty')
--- infer (Ap f x) env ty =
---    infer f env __ ∧ infer x env __
--- infer (Lam x) env ty = 
+arrow :: Type -> Type -> Type
+arrow x y = Compound "arrow" [x, y]
+
+-- next time: instantiate / generalize
+
+infer :: LambdaTerm -> Array Type -> Type -> Goal
+infer (LVar n) env ty
+    = case env !! n of
+      Nothing -> no
+      Just ty' -> (ty ≡ ty')
+infer (Ap f x) env ty
+    -- ∃ty_a. infer f env (ty_a → ty) ∧ infer x env ty_a
+    = fresh $ \ty_a -> infer f env (arrow ty_a ty)
+                     ∧ infer x env ty_a
+infer (Abs f)  env ty
+    -- ∃ty_a ty_b. ty ≡ arrow ty_a ty_b ∧ ...
+    = fresh $ \ty_a -> fresh $ \ty_b ->
+          (ty ≡ arrow ty_a ty_b)
+        ∧ infer f (ty_a : env) ty_b
+infer (NumLiteral n) env ty = (ty ≡ Compound "Number" [])
+
+-- env ⊢ f : a →  b
+
+identity_function :: LambdaTerm
+identity_function = Abs (LVar 0)
+
+-- The 'ty' will be the (Var 0), if this is called with blank state.
+infer_identity_function :: State -> List State
+infer_identity_function = fresh $ \ty -> infer identity_function [] ty
+
+
+infer_function :: LambdaTerm → List Term
+infer_function f = (fresh $ \ty -> infer f [] ty) blank
+               >>= (reify (Var 0) >>> pure)
 
 -- We could start with something simple, non-generic like this.
-
-
-
 
 -- run  :: ∀a. Goal a -> List a
 -- step :: ∀a. Goal a -> Maybe {answer :: a, next :: (Goal a)}
