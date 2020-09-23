@@ -5,8 +5,8 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Control.Lazy (defer, fix)
-import Data.Foldable (foldr, intercalate)
 import Data.Array (zipWith)
+import Data.Foldable (any, foldr, intercalate)
 import Data.List.Lazy (singleton)
 import Data.List.Lazy.Types (List(..), nil)
 import Data.Map.Internal (Map, empty, insert, lookup)
@@ -86,10 +86,14 @@ unify (Var i)        (Var j)        st = -- these are free variables, so neither
     pure $ st {
                 variableBindings = insert i (Var j) st.variableBindings }
 unify (Var i)        compound       st = 
-    pure $ st {
-                variableBindings = insert i compound st.variableBindings }
+    if occurs i compound st
+    then nil
+    else pure $ st {
+            variableBindings = insert i compound st.variableBindings }
 unify compound       (Var j)        st =
-    pure $ st { 
+    if occurs j compound st
+    then nil
+    else pure $ st { 
                 variableBindings = insert j compound st.variableBindings }
 unify (Compound n xs) (Compound m ys) st | (n == m)
     = let
@@ -97,8 +101,10 @@ unify (Compound n xs) (Compound m ys) st | (n == m)
     in foldr (>=>) pure zxy st
 unify (Compound n xs) (Compound m ys) st            = nil
 
---occurs :: Int -> Term -> State -> Boolean
---occurs i term st = ?occurs1
+-- Term must have passed the reifyVar first.
+occurs :: Int -> Term -> State -> Boolean
+occurs i (Var j) st = (i == j)
+occurs i (Compound _ xs) st = any (\a -> occurs i (reifyVar a st) st) xs
 
 blank :: State
 blank = {variableBindings : empty, nextVariable : 0}
