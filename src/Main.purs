@@ -32,7 +32,6 @@ type State = { variableBindings :: Map Int Term
 
 type Goal = State -> List State
 
-
 yes :: Goal -- prolog 'true'. -- 1, Equivalent to 'pure' in this context.
 yes = \st -> singleton st
 
@@ -118,13 +117,17 @@ emp = Compound "emp" []
 
 --list([]).
 --list([X|R]) :- list(R).
-listRule :: (Term -> Goal) -> Term -> Goal
-listRule recFn xs = let
-    rec = defer (\unit -> recFn)
-    in (xs ≡ emp)
-     ∨ (fresh $ \x -> fresh $ \r -> (xs ≡ cons x r ∧ rec r))
+-- listRule :: (Term -> Goal) -> Term -> Goal
+-- listRule rec xs =
+--     (xs ≡ emp)
+--      ∨ (fresh $ \x -> fresh $ \r -> (xs ≡ cons x r ∧ rec r))
+-- listR :: Term -> Goal
+-- listR = fix listRule
+
 listR :: Term -> Goal
-listR = fix listRule
+listR xs
+    = (xs ≡ emp)
+    ∨ (fresh $ \x -> fresh $ \r -> (xs ≡ cons x r ∧ listR r))
 
 example1 :: List State -- ?- list(R).
 example1 = (fresh $ \x -> listR x) blank
