@@ -5,8 +5,10 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Control.Lazy (defer, fix)
-import Data.Array (zipWith)
 import Data.Foldable (foldr, intercalate)
+import Data.Array (zipWith)
+import Data.List.Lazy (singleton)
+import Data.List.Lazy.Types (List(..), nil)
 import Data.Map.Internal (Map, empty, insert, lookup)
 import Data.Maybe (Maybe(..))
 import Data.Traversable (sequence)
@@ -28,14 +30,14 @@ instance showTerm :: Show Term where
 type State = { variableBindings :: Map Int Term
              , nextVariable     :: Int }
 
-type Goal = State -> Array State
+type Goal = State -> List State
 
 
 yes :: Goal -- prolog 'true'. -- 1, Equivalent to 'pure' in this context.
-yes = \st -> [st]
+yes = \st -> singleton st
 
 no :: Goal -- prolog 'false'. -- 0
-no = \st -> []
+no = \st -> nil
 
 -- Creates a fresh variable
 -- ∃x. ...
@@ -50,7 +52,7 @@ conj f g = \x -> f x >>= g
 
 
 -- conj f g = \x -> combineResults <$> (f x) <*> (g x)
--- combineResults :: State -> State -> Array State -- kind of like union, but needs to unify terms too.
+-- combineResults :: State -> State -> List State -- kind of like union, but needs to unify terms too.
 
 infix 4 disj as ∨ -- a + b
 disj :: Goal -> Goal -> Goal
@@ -65,6 +67,12 @@ reifyVar (Var i)        st = case lookup i st.variableBindings of
     Nothing -> (Var i)
 reifyVar compound _ = compound
 
+reify :: Term -> State -> Term
+reify (Var i) st = case lookup i st.variableBindings of
+    Just v -> reify v st
+    Nothing -> (Var i)
+reify (Compound n xs) st = Compound n (map (\t -> reify t st) xs)
+
 infix 6 eq as ≡
 eq :: Term -> Term -> Goal
 eq x y = \st -> unify (reifyVar x st) (reifyVar y st) st
@@ -73,7 +81,7 @@ eq x y = \st -> unify (reifyVar x st) (reifyVar y st) st
 -- To the unify, the bound input variables must be removed.
 
 -- To unify two variables mean that they're the same value afterwards.
-unify :: Term -> Term -> State -> Array State
+unify :: Term -> Term -> State -> List State
 unify (Var i)        (Var j)        st = -- these are free variables, so neither appears in the 'st'
     pure $ st {
                 variableBindings = insert i (Var j) st.variableBindings }
@@ -83,38 +91,40 @@ unify (Var i)        compound       st =
 unify compound       (Var j)        st =
     pure $ st { 
                 variableBindings = insert j compound st.variableBindings }
-unify (Compound n xs) (Compound m ys) st | (n == m) = let
-    zzz = zipWith (\x y st -> unify (reifyVar x st) (reifyVar y st)) xs ys
-    in foldr (>=>) pure zzz
-
-unify (Compound n xs) (Compound m ys) st            = Nothing
+unify (Compound n xs) (Compound m ys) st | (n == m)
+    = let
+    zxy = zipWith (\x y st' -> unify (reifyVar x st') (reifyVar y st') st') xs ys
+    in foldr (>=>) pure zxy st
+unify (Compound n xs) (Compound m ys) st            = nil
 
 --occurs :: Int -> Term -> State -> Boolean
 --occurs i term st = ?occurs1
 
+blank :: State
+blank = {variableBindings : empty, nextVariable : 0}
+
+
 cons :: Term -> Term -> Term
 cons x y = Compound "cons" [x, y]
 
-nil :: Term
-nil = Compound "nil" []
+emp :: Term
+emp = Compound "emp" []
 
 --list([]).
 --list([X|R]) :- list(R).
 listRule :: (Term -> Goal) -> Term -> Goal
 listRule recFn xs = let
     rec = defer (\unit -> recFn)
-    in (xs ≡ nil)
+    in (xs ≡ emp)
      ∨ (fresh $ \x -> fresh $ \r -> (xs ≡ cons x r ∧ rec r))
 listR :: Term -> Goal
 listR = fix listRule
 
-example1 :: Goal
+example1 :: List State -- ?- list(R).
 example1 = (fresh $ \x -> listR x) blank
 -- [], [Y], ...
 
 
-blank :: State
-blank = {variableBindings : empty, nextVariable : 0}
 
 --cat([], Result, Result) :- list(Result).
 --cat([], [], []).
@@ -140,11 +150,11 @@ blank = {variableBindings : empty, nextVariable : 0}
 
 
 test1 :: Term
-test1 = Compound "cons" [Compound "a" [], Compound "nil" []]
+test1 = Compound "cons" [Compound "a" [], Compound "emp" []]
 
 type Type = Term
 
--- infer :: LambdaTerm -> Array Type -> Type -> Goal
+-- infer :: LambdaTerm -> List Type -> Type -> Goal
 -- infer (Var i) env ty = case (env !! i) of
 --     Nothing -> no
 --     Just ty' -> (ty ≡ ty')
@@ -157,7 +167,7 @@ type Type = Term
 
 
 
--- run  :: ∀a. Goal a -> Array a
+-- run  :: ∀a. Goal a -> List a
 -- step :: ∀a. Goal a -> Maybe {answer :: a, next :: (Goal a)}
 
 -- reify :: Term -> Goal Term

@@ -7,6 +7,7 @@ You can edit this file as you like.
   [ "arrays"
   , "console"
   , "effect"
+  , "lists"
   , "maybe"
   , "ordered-collections"
   , "psci-support"
